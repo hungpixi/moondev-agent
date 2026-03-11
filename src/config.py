@@ -70,20 +70,16 @@ VALIDATE_START = "2026-01-01"   # Q1 2026 — validate
 VALIDATE_END   = "2026-03-10"
 
 # ====================================================
-# 🤖 AI Model Settings
+# 🤖 AI Model Settings (v3: Dùng Antigravity trực tiếp)
 # ====================================================
-# Primary: DeepSeek (nhanh + rẻ)
-RESEARCH_MODEL  = "deepseek-chat"     # "deepseek-chat" | "deepseek-reasoner"
-BACKTEST_MODEL  = "deepseek-chat"
-DEBUG_MODEL     = "deepseek-chat"
-EXPORT_MQL5_MODEL = "deepseek-chat"  # Agent mới: MQL5 export
-
-# Fallback: Google Gemini
-GEMINI_FALLBACK_MODEL = "gemini-1.5-flash"
-USE_GEMINI_FALLBACK   = True          # Tự động switch nếu DeepSeek fail
-
-AI_TEMPERATURE  = 0.7
-AI_MAX_TOKENS   = 8192
+# v3 không cần API keys — Antigravity viết code strực tiếp
+# Nếu muốn mở lại API mode, uncomment các dòng dưới:
+# RESEARCH_MODEL     = "deepseek-chat"
+# BACKTEST_MODEL     = "deepseek-chat"
+# GEMINI_FALLBACK_MODEL = "gemini-1.5-flash"
+# USE_GEMINI_FALLBACK   = True
+# AI_TEMPERATURE  = 0.7
+# AI_MAX_TOKENS   = 8192
 
 # ====================================================
 # 💤 Timing

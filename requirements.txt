@@ -20,9 +20,9 @@ schedule==1.2.0
 python-dateutil==2.8.2
 backoff==2.2.1
 
-# AI APIs
-openai>=1.59.5       # Used for DeepSeek (OpenAI-compatible) + ChatGPT
-google-generativeai>=0.8.0  # Gemini fallback
+# AI APIs (v3: không cần — dùng Antigravity trực tiếp thay vì gọi API)
+# openai>=1.59.5       # Uncomment nếu muốn dùng lại API mode
+# google-generativeai>=0.8.0  # Uncomment nếu muốn Gemini fallback
 
 # YouTube transcripts (rbi_agent)
 youtube-transcript-api==0.6.2
