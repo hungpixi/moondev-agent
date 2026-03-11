@@ -1,191 +1,149 @@
-# 🤖 AI AGENTS FOR TRADING
+<div align="center">
 
-<p align="center">
-  <a href="https://www.moondev.com/"><img src="moondev.png" width="300" alt="Moon Dev"></a>
-</p>
+# 🤖 MoonDev AI Trading Agents
+### Fork & Tối Ưu: Ichimoku + MQL5 Backtest Pipeline
 
-This project explores the potential of [artificial financial intelligence](https://www.afi.xyz) - a focused implementation of AI for trading and investing research.
+[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://python.org)
+[![DeepSeek](https://img.shields.io/badge/AI-DeepSeek%20%7C%20Gemini-purple)](https://platform.deepseek.com)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Comarai](https://img.shields.io/badge/Built%20by-Comarai.com-orange)](https://comarai.com)
 
-⭐️ [first full concise documentation video (watch here)](https://www.youtube.com/watch?v=So_LQVKa55c)
-
-📀 follow all updates here on youtube: https://www.youtube.com/playlist?list=PLXrNVMjRZUJg4M4uz52iGd1LhXXGVbIFz
-
-**⚠️ IMPORTANT: This is an experimental project. There are NO guarantees of profitability. Trading involves substantial risk of loss.**
-
-## 🎯 Vision
-We're researching AI agents for trading that will eventually leverage [AFI](https://www.afi.xyz). With 4 years of experience training humans through our [bootcamp](https://algotradecamp.com), we're exploring where AI agents might complement human trading operations, and later replace trading human operations. This is experimental research, not a profitable trading solution.
-
-## 🧠 Hypothesis
-AI agents will be able to build a better quant portfolio than humans. i've spent the last 4 years building quant systems & training others to do so. 2025 is about replicating that success but with ai agents doing it instead of me. in 2026 i will release a paper of my findings after a full year of testing ai agents in quant vs the last 4 years of humans.
-
-## 💡 Concept
-AI agents might help address common trading challenges:
-- Emotional reactions
-- Ego-driven decisions
-- Inconsistent execution
-- Fatigue effects
-- Impatience
-- Fear & Greed cycles
-
-While we use the RBI framework for strategy research, we're exploring AI agents as potential tools. We're in early stages with LLM technology, investigating possibilities in the trading space.
-
-*There is no token associated with this project and there never will be. any token launched is not affiliated with this project, moon dev will never dm you. be careful. don't send funds anywhere*
-
-## Video Updates & Training
-all the video updates are consolidated in the below playlist on youtube
-📀 https://www.youtube.com/playlist?list=PLXrNVMjRZUJg4M4uz52iGd1LhXXGVbIFz
-
-## ⚠️ Critical Disclaimers
-
-*There is no token associated with this project and there never will be. any token launched is not affiliated with this project, moon dev will never dm you. be careful. don't send funds anywhere*
-
-**PLEASE READ CAREFULLY:**
-
-1. This is an experimental research project, NOT a trading system
-2. There are NO plug-and-play solutions for guaranteed profits
-3. We do NOT provide trading strategies
-4. Success depends entirely on YOUR:
-   - Trading strategy
-   - Risk management
-   - Market research
-   - Testing and validation
-   - Overall trading approach
-
-5. NO AI agent can guarantee profitable trading
-6. You MUST develop and validate your own trading approach
-7. Trading involves substantial risk of loss
-8. Past performance does not indicate future results
-
-## 👂 Looking for Updates?
-Project updates will be posted in discord, join here: [moondev.com](http://moondev.com) 
-
-
-## 🔗 Links
-- Free Algo Trading Roadmap: [moondev.com](https://moondev.com)
-- Algo Trading Education: [algotradecamp.com](https://algotradecamp.com)
-- Business Contact [moon@algotradecamp.com](mailto:moon@algotradecamp.com)
-
-
-## Live Agents
-- Trading Agent (`trading_agent.py`): Example agent that analyzes token data via LLM to make basic trade decisions
-- Strategy Agent (`strategy_agent.py`): Manages and executes trading strategies placed in the strategies folder
-- Risk Agent (`risk_agent.py`): Monitors and manages portfolio risk, enforcing position limits and PnL thresholds
-- Copy Agent (`copy_agent.py`): monitors copy bot for potential trades
-- Whale Agent (`whale_agent.py`): monitors whale activity and announces when a whale enters the market
-- Sentiment Agent (`sentiment_agent.py`): analyzes Twitter sentiment for crypto tokens with voice announcements
-- Listing Arbitrage Agent (`listingarb_agent.py`): identifies promising Solana tokens on CoinGecko before they reach major exchanges like Binance and Coinbase, using parallel AI analysis for technical and fundamental insights
-- Focus Agent (`focus_agent.py`): randomly samples audio during coding sessions to maintain productivity, providing focus scores and voice alerts when focus drops (~$10/month, perfect for voice-to-code workflows)
-- Funding Agent (`funding_agent.py`): monitors funding rates across exchanges and uses AI to analyze opportunities, providing voice alerts for extreme funding situations with technical context 🌙
-- Liquidation Agent (`liquidation_agent.py`): tracks liquidation events with configurable time windows (15min/1hr/4hr), providing AI analysis and voice alerts for significant liquidation spikes 💦
-- Chart Agent (`chartanalysis_agent.py`): looks at any crypto chart and then analyzes it with ai to make a buy/sell/nothing reccomendation.
-- funding rate arbitrage agent (`fundingarb_agent.py`): tracks the funding rate on hyper liquid to find funding rate arbitrage opportunities between hl and solana
-- rbi agent (`rbi_agent.py`): uses deepseek to research trading strategies based on the youtube video, pdf, or words you give it. then sends to his ai friend who codes out the backtest.
-
-## 🚀 Project Progress & Roadmap
-### Phase 1: Foundation & Basic Trading ✅
-- [x] Basic project structure
-- [x] Environment setup
-- [x] Token data collection
-- [x] Basic trading functions
-- [x] Market data API integration (OI, Liquidations, Funding)
-- [x] Risk management agent with PnL limits
-- [x] Risk agent minimum balance protection (1/8/25)
-- [x] CopyBot portfolio analyzer (1/8/25)
-- [x] Comprehensive API access for Quantalete members (1/15/25)
-
-### Phase 2: Advanced Features 🚀
-- [ ] Portfolio optimization
-- [ ] Advanced risk management
-- [ ] Machine learning integration
-- [x] Sentiment analysis with voice announcements
-- [ ] Backtesting framework
-- [ ] Performance analytics
-
-### Shipped Features 📦
-
-- [x] 1/23 - build an rbi agent that codes backtests based on trading strategy videos, pdfs or words
-- [x] 1/20 - built the funding rate arbitrage trading agent to annnounce when there is a funding rate arbitrage between hyperliquid tokens and spot solana tokens. later we can update this to place the trades
-- [x] 1/17 - built chuck the chart analysis agent that reads in any crypto chart and then analyzes it to get a buy/sell/nothing reccomendation.
-- [x] 1/16 - Built Luna the Liquidation Agent with configurable time windows (15min/1hr/4hr)
-            - Updated Whale Agent to use new OI data format
-            - Fixed Funding Agent to handle new API structure
-            - All agents now using consistent Moon Dev API v2
-- [x] 1/15 - Released comprehensive API access with detailed documentation
-            - Historical liquidation data endpoints
-            - Real-time funding rate monitoring
-            - New Solana token launch tracking
-            - Detailed & combined ETH/BTC open interest historical data
-            - CopyBot data access for reference (follow list & their recent transactions)
-- [x] 1/14 - Added Funding Rate Agent that monitors and announces extreme funding rates
-            - Uses AI to analyze funding opportunities with technical context
-            - Provides voice announcements for significant funding events
-            - Tracks historical funding data for better analysis
-- [x] 1/12 - built a Listing Arbitrage Agent that identifies promising Solana tokens before they reach major exchanges
-            - Uses parallel AI analysis with technical and fundamental agents
-            - Filters by market cap and volume criteria
-            - Saves analysis results and buy recommendations to CSV
-- [x] 1/10 - built a coin gecko agent conversation between 2 ai agents and all of coin geckos data
-- [x] 1/10 - added a focus agent that will take random samples of my voice to ensure im always locked in. my kpi is 200 ai uses per day which is hard when i yap so this is the solution.
-- [x] 1/9 - Added Sentiment Analysis Agent with voice announcements and historical tracking
-            - Monitors Twitter sentiment for major tokens
-            - Tracks sentiment changes over time
-            - Announces significant sentiment shifts
-         - updated the whale agent as well to work better
-- [x] 1/8 - Added minimum balance protection to Risk Agent with configurable AI consultation
-            - Completed CopyBot portfolio analyzer with position sizing
-            - V0 of the whale agent launched
-- [x] 1/7 - CopyBot Agent: Added AI agent to analyze copybot portfolio and decide on whether it should take a position on their account 
-- [x] 1/6 - Market Data API: Added comprehensive API for liquidations, funding rates, open interest, and copybot data
-- [x] 1/5 - created a documentation training video with a full walkthrough of this github (releasing jan 7th)
-- [x] 1/4 - strategy_agent.py: an ai agent that has last say on any strategy placed in strategies folder
-- [x] 1/3 - risk_agent.py: built out an ai agent to manage risk
-- [x] 1/2 - trading_agent.py: built the first trading agent 
-- [x] 1/1 - first lines of code written
-
-## 🚀 Quick Start Guide
-
-1. ⭐ **Star the Repo**
-   - Click the star button to save it to your GitHub favorites
-
-2. 🍴 **Fork the Repo**
-   - Fork to your GitHub account to get your own copy
-   - This lets you make changes and track updates
-
-3. 💻 **Open in Your IDE**
-   - Clone to your local machine
-   - Recommended: Use [Cursor](https://www.cursor.com/) or [Windsurfer](https://codeium.com/) for AI-enabled coding
-
-4. 🔑 **Set Environment Variables**
-   - Check `.env.example` for required variables
-   - Create a copy of above and name it `.env` file with your keys:
-     - Anthropic API key
-     - Other trading API keys
-   - ⚠️ Never commit or share your API keys!
-
-5. 🤖 **Customize Agent Prompts**
-   - Navigate to `/agents` folder
-   - Modify LLM prompts to fit your needs
-   - Each agent has configurable parameters
-
-6. 📈 **Implement Your Strategies**
-   - Add your strategies to `/strategies` folder
-   - Remember: Out-of-box code is NOT profitable
-   - Thorough testing required before live trading
-
-7. 🏃‍♂️ **Run the System**
-   - Execute via `main.py`
-   - Toggle agents on/off as needed
-   - Monitor logs for performance
+</div>
 
 ---
-*Built with love by Moon Dev - Pioneering the future of AI-powered trading*
 
+## 🎯 Repo này là gì?
 
-## 📜 Detailed Disclaimer
-The content presented is for educational and informational purposes only and does not constitute financial advice. All trading involves risk and may not be suitable for all investors. You should carefully consider your investment objectives, level of experience, and risk appetite before investing.
+Fork & nâng cấp từ [CurvedLightGroup/MoonDev-Trading-Ai-Agents](https://github.com/CurvedLightGroup/MoonDev-Trading-Ai-Agents).
 
-Past performance is not indicative of future results. There is no guarantee that any trading strategy or algorithm discussed will result in profits or will not incur losses.
+**Điểm khác biệt so với repo gốc:**
 
-**CFTC Disclaimer:** Commodity Futures Trading Commission (CFTC) regulations require disclosure of the risks associated with trading commodities and derivatives. There is a substantial risk of loss in trading and investing.
+| Feature | Gốc (MoonDev) | Fork này |
+|---|---|---|
+| Target instrument | Solana tokens | **Forex / XAU / BTC** |
+| AI Model | DeepSeek only | **DeepSeek + Gemini fallback** |
+| Backtest strategy | Generic EMA/Momentum | **Ichimoku + EMA200 filter** |
+| Scoring system | Không có | **Composite scoring (Balance>PF>RF>MaxDD)** |
+| MQL5 export | Không có | **Agent thứ 5: .mq5 skeleton** |
+| Windows support | Broken (path macOS) | **Native Windows paths** |
+| TA Library | TA-Lib (cần binary) | **pandas-ta (pip install)** |
 
-I am not a licensed financial advisor or a registered broker-dealer. Content & code is based on personal research perspectives and should not be relied upon as a guarantee of success in trading.
+---
+
+## 🧠 Tư Duy Thiết Kế
+
+> *Repo gốc build AI agent để trade Solana memecoin. Tôi cần pipeline khác: nghiên cứu chiến lược → backtest Python → score → export MQL5 EA — rồi backtest thật trong MT5 trước khi chạy live. Đây là tinh thần của MQL5 Strategy Tester.*
+
+**Pipeline 5 agents:**
+```
+Input (text / YouTube / PDF)
+  ↓ [1] Research AI   → Phân tích strategy, extract rules
+  ↓ [2] Backtest AI   → Code backtesting.py + Ichimoku
+  ↓ [3] Debug AI      → Fix lỗi kỹ thuật
+  ↓ [4] Package AI    → Clean code, bỏ backtesting.lib
+  ↓ [5] MQL5 Export  → Generate .mq5 skeleton (MỚI)
+         + Composite Score Report
+```
+
+**Scoring system** (giống MT5 Optimizer):
+```
+Score = 0.4 × Return% + 0.3 × ProfitFactor + 0.2 × RecoveryFactor - 0.1 × MaxDD
+```
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Clone
+git clone https://github.com/hungpixi/moondev-agent.git
+cd moondev-agent
+
+# 2. Cài dependencies (Windows-friendly)
+pip install -r requirements.txt
+
+# 3. Setup API keys
+cp .env.example .env
+# Mở .env, điền DEEPSEEK_KEY và GEMINI_KEY
+
+# 4. Chạy RBI Agent
+python src/agents/rbi_agent.py
+
+# 5. (Optional) Download data XAUUSD
+python src/data/ohlcv_collector.py
+
+# 6. (Optional) Chạy backtest mẫu Ichimoku
+python src/data/rbi/backtests/IchiDCA_Template_BT.py
+```
+
+---
+
+## 📁 Cấu Trúc
+
+```
+moondev-agent/
+├── src/
+│   ├── agents/
+│   │   ├── rbi_agent.py          ← Pipeline chính (5 agents)
+│   │   ├── risk_agent.py         ← Quản lý risk portfolio
+│   │   ├── trading_agent.py      ← Trade agent (Solana)
+│   │   └── ...                   ← Các agent gốc khác
+│   ├── data/
+│   │   ├── ohlcv_collector.py    ← Download XAUUSD/BTC/FX (yfinance)
+│   │   ├── composite_scorer.py   ← Scoring system (MQL5 style)
+│   │   └── rbi/
+│   │       ├── backtests/        ← AI-generated backtest code
+│   │       ├── backtests_final/  ← Final clean backtest
+│   │       ├── mql5_exports/     ← .mq5 skeleton files (MỚI)
+│   │       ├── research/         ← AI research notes
+│   │       └── charts/           ← HTML interactive charts
+│   └── config.py                 ← Cấu hình tập trung
+├── context.md                    ← Context cá nhân (gitignored)
+├── .env.example                  ← API key template
+└── requirements.txt
+```
+
+---
+
+## 🔮 Roadmap
+
+- [ ] Walk-forward validation tự động (Q4 2025 → Q1 2026)
+- [ ] Multi-instrument comparison (XAUUSD vs BTCUSD vs EURUSD)
+- [ ] Dashboard hiển thị composite scores
+- [ ] Auto-push kết quả tốt nhất vào MT5 via Python-MT5 bridge
+- [ ] Telegram notification khi backtest hoàn tất
+
+---
+
+## 📚 Nguồn Tham Khảo
+
+- Repo gốc: [CurvedLightGroup/MoonDev-Trading-Ai-Agents](https://github.com/CurvedLightGroup/MoonDev-Trading-Ai-Agents)
+- Backtesting framework: [kernc/backtesting.py](https://github.com/kernc/backtesting.py)
+- Ichimoku reference: Goichi Hosoda
+
+---
+
+## 🤝 Bạn Muốn Hệ Thống Trading AI Tương Tự?
+
+| Bạn cần | Chúng tôi đã làm ✅ |
+|---|---|
+| AI Agent phân tích & backtest | ✅ RBI Pipeline 5 agents |
+| Export chiến lược sang MQL5 EA | ✅ MQL5 Export Agent |
+| Prop Firm risk management | ✅ DD/Daily Loss guard |
+| Composite scoring như MT5 | ✅ Balance>PF>RF>MaxDD |
+| Auto trade execution | 🔄 Đang phát triển |
+
+<div align="center">
+
+[🌐 Yêu cầu Demo](https://comarai.com) · [💬 Zalo](https://zalo.me/0834422439) · [📧 Email](mailto:hungphamphunguyen@gmail.com)
+
+**Comarai — AI Automation Agency**  
+*Em Sale · Em Content · Em Marketing · Em Trade*
+
+> Trade thông minh hơn, không phải chăm chỉ hơn. AI làm 80% việc nặng cho bạn.
+
+</div>
+
+---
+
+*Built by [hungpixi](https://github.com/hungpixi) · Powered by [Comarai.com](https://comarai.com)*

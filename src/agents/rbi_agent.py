@@ -1,683 +1,579 @@
 """
-🌙 Moon Dev's RBI Agent (Research-Backtest-Implement)
-Built with love by Moon Dev 🚀
+🌙 MoonDev RBI Agent — Nâng Cấp Ichimoku + MQL5 Export
+Fork: CurvedLightGroup/MoonDev-Trading-Ai-Agents
 
-Required Setup:
-1. Create folder structure:
-   src/
-   ├── data/
-   │   └── rbi/
-   │       ├── research/         # Strategy research outputs
-   │       ├── backtests/        # Initial backtest code
-   │       ├── backtests_final/  # Debugged backtest code
-   │       ├── NQ-2m.csv         # Price data for backtesting
-   │       └── ideas.txt        # Trading ideas to process
+Cải tiến so với gốc:
+  ✅ Windows-compatible paths (không hardcode macOS)
+  ✅ Prompts enforce Ichimoku + EMA filter (phù hợp MQL5 EA)
+  ✅ Composite scoring sau mỗi backtest (Balance > PF > RF > MaxDD)
+  ✅ Walk-forward validation tự động (Q4 2025 → Q1 2026)
+  ✅ Agent thứ 5: MQL5 Export (generate .mq5 skeleton)
+  ✅ Gemini API fallback nếu DeepSeek lỗi
+  ✅ yfinance data download (XAUUSD, BTCUSD, FX)
 
-2. Environment Variables:
-   - DEEPSEEK_KEY: Your DeepSeek API key
-
-3. Create ideas.txt:
-   - One trading idea per line
-   - Can be YouTube URLs, PDF links, or text descriptions
-   - Lines starting with # are ignored
-
-This agent automates the RBI process:
-1. Research: Analyzes trading strategies from various sources
-2. Backtest: Creates backtests for promising strategies
-3. Debug: Fixes technical issues in generated backtests
-4. Implement: Creates a backtest implementation for the strategy
-
-Remember: Past performance doesn't guarantee future results!
+Flow: Input → [1] Research AI → [2] Backtest AI → [3] Debug AI
+      → [4] Package AI → [5] MQL5 Export AI → Score & Report
 """
-
-# DeepSeek Model Selection per Agent
-# Set to "0" to use config.py's AI_MODEL setting
-# Options for each: "deepseek-chat" (faster) or "deepseek-reasoner" (more analytical)
-RESEARCH_MODEL = "0"  # Analyzes strategies thoroughly
-BACKTEST_MODEL = "0"  # Creative in implementing strategies
-DEBUG_MODEL = "0"     # Careful code analysis
-
-# Agent Prompts
-
-RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
-
-IMPORTANT NAMING RULES:
-1. Create a UNIQUE TWO-WORD NAME for this specific strategy
-2. The name must be DIFFERENT from any generic names like "TrendFollower" or "MomentumStrategy"
-3. First word should describe the main approach (e.g., Adaptive, Neural, Quantum, Fractal, Dynamic)
-4. Second word should describe the specific technique (e.g., Reversal, Breakout, Oscillator, Divergence)
-5. Make the name SPECIFIC to this strategy's unique aspects
-
-Examples of good names:
-- "AdaptiveBreakout" for a strategy that adjusts breakout levels
-- "FractalMomentum" for a strategy using fractal analysis with momentum
-- "QuantumReversal" for a complex mean reversion strategy
-- "NeuralDivergence" for a strategy focusing on divergence patterns
-
-BAD names to avoid:
-- "TrendFollower" (too generic)
-- "SimpleMoving" (too basic)
-- "PriceAction" (too vague)
-
-Output format must start with:
-STRATEGY_NAME: [Your unique two-word name]
-
-Then analyze the trading strategy content and create detailed instructions.
-Focus on:
-1. Key strategy components
-2. Entry/exit rules
-3. Risk management
-4. Required indicators
-
-Your complete output must follow this format:
-STRATEGY_NAME: [Your unique two-word name]
-
-STRATEGY_DETAILS:
-[Your detailed analysis]
-
-Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
-"""
-
-BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙
-Create a backtesting.py implementation for the strategy.
-Include:
-1. All necessary imports
-2. Strategy class with indicators
-3. Entry/exit logic
-4. Risk management
-5. Parameter optimization
-6. your size should be 1,000,000
-7. If you need indicators use TA lib or pandas TA. Do not use backtesting.py's indicators. 
-
-IMPORTANT DATA HANDLING:
-1. Clean column names by removing spaces: data.columns = data.columns.str.strip().str.lower()
-2. Drop any unnamed columns: data = data.drop(columns=[col for col in data.columns if 'unnamed' in col.lower()])
-3. Ensure proper column mapping to match backtesting requirements:
-   - Required columns: 'Open', 'High', 'Low', 'Close', 'Volume'
-   - Use proper case (capital first letter)
-4. When optimizing parameters:
-   - Never try to optimize lists directly
-   - Break down list parameters (like Fibonacci levels) into individual parameters
-   - Use ranges for optimization (e.g., fib_level_1=range(30, 40, 2))
-
-INDICATOR CALCULATION RULES:
-1. ALWAYS use self.I() wrapper for ANY indicator calculations
-2. Use talib functions instead of pandas operations:
-   - Instead of: self.data.Close.rolling(20).mean()
-   - Use: self.I(talib.SMA, self.data.Close, timeperiod=20)
-3. For swing high/lows use talib.MAX/MIN:
-   - Instead of: self.data.High.rolling(window=20).max()
-   - Use: self.I(talib.MAX, self.data.High, timeperiod=20)
-
-BACKTEST EXECUTION ORDER:
-1. Run initial backtest with default parameters first
-2. Print full stats using print(stats) and print(stats._strategy)
-3. Show initial performance plot
-4. Then run optimization
-5. Show optimized results and final plot
-
-CHART OUTPUT:
-1. Import os at the top of the file
-2. Save charts to the charts directory:
-   ```python
-   # Save plots to charts directory
-   chart_file = os.path.join("/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/charts", f"{strategy_name}_chart.html")
-   bt.plot(filename=chart_file, open_browser=False)
-   ```
-3. Do this for both initial and optimized plots
-
-RISK MANAGEMENT:
-1. Always calculate position sizes based on risk percentage
-2. Use proper stop loss and take profit calculations
-3. Include risk-reward ratio in optimization parameters
-4. Print entry/exit signals with Moon Dev themed messages
-
-If you need indicators use TA lib or pandas TA. Do not use backtesting.py's indicators. 
-
-Use this data path: /Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv
-the above data head looks like below
-datetime, open, high, low, close, volume,
-2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
-2023-01-01 00:15:00, 16509.78, 16534.66, 16509.11, 16533.43, 308.12276951,
-
-Always add plenty of Moon Dev themed debug prints with emojis to make debugging easier! 🌙 ✨ 🚀
-"""
-
-DEBUG_PROMPT = """
-You are Moon Dev's Debug AI 🌙
-Fix technical issues in the backtest code WITHOUT changing the strategy logic.
-Focus on:
-1. Syntax errors (like incorrect string formatting)
-2. Import statements and dependencies
-3. Class and function definitions
-4. Variable scoping and naming
-5. Print statement formatting
-
-DO NOT change:
-1. Strategy logic
-2. Entry/exit conditions
-3. Risk management rules
-4. Parameter values
-
-Return the complete fixed code.
-"""
-
-PACKAGE_PROMPT = """
-You are Moon Dev's Package AI 🌙
-Your job is to ensure the backtest code NEVER uses ANY backtesting.lib imports or functions.
-
-❌ STRICTLY FORBIDDEN:
-1. from backtesting.lib import *
-2. import backtesting.lib
-3. from backtesting.lib import crossover
-4. ANY use of backtesting.lib
-
-✅ REQUIRED REPLACEMENTS:
-1. For crossover detection:
-   Instead of: backtesting.lib.crossover(a, b)
-   Use: (a[-2] < b[-2] and a[-1] > b[-1])  # for bullish crossover
-        (a[-2] > b[-2] and a[-1] < b[-1])  # for bearish crossover
-
-2. For indicators:
-   - Use talib for all standard indicators (SMA, RSI, MACD, etc.)
-   - Use pandas-ta for specialized indicators
-   - ALWAYS wrap in self.I()
-
-3. For signal generation:
-   - Use numpy/pandas boolean conditions
-   - Use rolling window comparisons with array indexing
-   - Use mathematical comparisons (>, <, ==)
-
-Example conversions:
-❌ from backtesting.lib import crossover
-❌ if crossover(fast_ma, slow_ma):
-✅ if fast_ma[-2] < slow_ma[-2] and fast_ma[-1] > slow_ma[-1]:
-
-❌ self.sma = self.I(backtesting.lib.SMA, self.data.Close, 20)
-✅ self.sma = self.I(talib.SMA, self.data.Close, timeperiod=20)
-
-IMPORTANT: Scan the ENTIRE code for any backtesting.lib usage and replace ALL instances!
-Return the complete fixed code with proper Moon Dev themed debug prints! 🌙 ✨
-"""
-
-def get_model_id(model):
-    """Get DR/DC identifier based on model"""
-    return "DR" if model == "deepseek-reasoner" else "DC"
 
 import os
+import sys
 import time
 import re
 from datetime import datetime
-import requests
+from pathlib import Path
 from io import BytesIO
+import requests
 import PyPDF2
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
-from pathlib import Path
 from termcolor import cprint
 import threading
 import itertools
-import sys
 
-# DeepSeek Configuration
+# ── Project paths ───────────────────────────────────────────
+PROJECT_ROOT   = Path(__file__).parent.parent          # → src/
+DATA_DIR       = PROJECT_ROOT / "data" / "rbi"
+RESEARCH_DIR   = DATA_DIR / "research"
+BACKTEST_DIR   = DATA_DIR / "backtests"
+PACKAGE_DIR    = DATA_DIR / "backtests_package"
+FINAL_DIR      = DATA_DIR / "backtests_final"
+MQL5_DIR       = DATA_DIR / "mql5_exports"            # MỚI
+CHARTS_DIR     = DATA_DIR / "charts"
+
+for d in [DATA_DIR, RESEARCH_DIR, BACKTEST_DIR, PACKAGE_DIR, FINAL_DIR, MQL5_DIR, CHARTS_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
+
+# ── Config ──────────────────────────────────────────────────
+sys.path.insert(0, str(PROJECT_ROOT))
+from config import (
+    RESEARCH_MODEL, BACKTEST_MODEL, DEBUG_MODEL, EXPORT_MQL5_MODEL,
+    AI_MAX_TOKENS, AI_TEMPERATURE,
+    GEMINI_FALLBACK_MODEL, USE_GEMINI_FALLBACK,
+    ACCOUNT_BALANCE, LEVERAGE,
+    OPTIMIZE_START, OPTIMIZE_END, VALIDATE_START, VALIDATE_END,
+    ICHI_TENKAN, ICHI_KIJUN, ICHI_SENKOU_B, ICHI_DISPLACEMENT,
+    EMA_SLOW_PERIOD,
+    MAX_DRAWDOWN_PCT, DAILY_LOSS_LIMIT_PCT,
+)
+
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-# Update data directory paths
-PROJECT_ROOT = Path(__file__).parent.parent  # Points to src/
-DATA_DIR = PROJECT_ROOT / "data/rbi"
-RESEARCH_DIR = DATA_DIR / "research"
-BACKTEST_DIR = DATA_DIR / "backtests"
-PACKAGE_DIR = DATA_DIR / "backtests_package"
-FINAL_BACKTEST_DIR = DATA_DIR / "backtests_final"
-CHARTS_DIR = DATA_DIR / "charts"  # New directory for HTML charts
+# ── Data path helper ─────────────────────────────────────────
+def get_data_path(instrument: str = "XAUUSD", timeframe: str = "1H") -> Path:
+    """Trả về path file CSV, tải nếu chưa có."""
+    csv_path = DATA_DIR / f"{instrument}-{timeframe}.csv"
+    if not csv_path.exists():
+        cprint(f"📡 Data not found locally, downloading {instrument}...", "yellow")
+        try:
+            from data.ohlcv_collector import download_ohlcv
+            download_ohlcv(instrument, timeframe)
+        except Exception as e:
+            cprint(f"⚠️ Download failed: {e}. Will use BTC-USD-15m.csv fallback.", "yellow")
+    return csv_path
 
-# Create main directories if they don't exist
-for dir in [DATA_DIR, RESEARCH_DIR, BACKTEST_DIR, PACKAGE_DIR, FINAL_BACKTEST_DIR, CHARTS_DIR]:
-    dir.mkdir(parents=True, exist_ok=True)
+DEFAULT_DATA_PATH = DATA_DIR / "BTC-USD-15m.csv"
 
-print(f"📂 Using RBI data directory: {DATA_DIR}")
-print(f"📂 Research directory: {RESEARCH_DIR}")
-print(f"📂 Backtest directory: {BACKTEST_DIR}")
-print(f"📂 Package directory: {PACKAGE_DIR}")
-print(f"📂 Final backtest directory: {FINAL_BACKTEST_DIR}")
-print(f"📈 Charts directory: {CHARTS_DIR}")
+# ═══════════════════════════════════════════════════════════════
+# PROMPTS — Ichimoku-aware, MQL5-aligned
+# ═══════════════════════════════════════════════════════════════
+
+RESEARCH_PROMPT = f"""
+Bạn là Research AI của hệ thống MoonDev Trading — chuyên phân tích chiến lược theo tinh thần Prop Firm & MQL5 backtest.
+
+NAMING RULES:
+1. Tạo tên UNIQUE 2 từ (PascalCase) cho strategy này
+2. Từ 1: phương pháp chính (Ichi, EMA, MACD, Momentum, DCA...)
+3. Từ 2: kỹ thuật đặc trưng (Cloud, Cross, Divergence, Breakout...)
+4. Ví dụ tốt: "IchiCloud", "EMAFusion", "MomentumBreak", "DualKijun"
+
+Output format bắt buộc:
+STRATEGY_NAME: [TwoWordName]
+
+STRATEGY_DETAILS:
+[Phân tích chi tiết]
+
+Phân tích tập trung vào:
+1. **Indicator chính** (ưu tiên Ichimoku: nêu rõ Tenkan={ICHI_TENKAN}, Kijun={ICHI_KIJUN}, Senkou B={ICHI_SENKOU_B})
+2. **Filter xu hướng** (EMA{EMA_SLOW_PERIOD} H4 — price trên/dưới EMA → bias)
+3. **Điều kiện vào lệnh** (cụ thể: cross, cloud breakout, price action)
+4. **Điều kiện thoát lệnh** (SL: dưới Kijun/cloud; TP: RR ratio hoặc trailing)
+5. **Prop Firm compatibility** (DD < {MAX_DRAWDOWN_PCT}%, daily loss < {DAILY_LOSS_LIMIT_PCT}%)
+6. **Timeframe** (H1 entry, H4 trend)
+7. **Risk management** (position sizing theo % equity, không over-leverage)
+"""
+
+BACKTEST_PROMPT = f"""
+Bạn là Backtest AI — code chiến lược trading bằng backtesting.py framework (Python).
+
+QUAN TRỌNG — WINDOWS PATHS:
+- Đừng hardcode path macOS /Users/md/...
+- Dùng pathlib.Path(__file__).parent để tìm data dynamically
+- Thay tất cả backtesting.lib.crossover bằng array index comparison
+
+PANDAS-TA (không dùng TA-Lib):
+- import pandas_ta as ta
+- Ví dụ: df.ta.ema(length=200) → trả về Series
+
+ICHIMOKU — Tính ĐÚNG bằng pandas-ta:
+```python
+import pandas_ta as ta
+# Ichimoku luôn trả về (DataFrame_span_a_b, DataFrame_span_ab_precomputed)
+ichi_result = ta.ichimoku(high, low, close,
+                          tenkan={ICHI_TENKAN}, kijun={ICHI_KIJUN}, senkou={ICHI_SENKOU_B})
+ichi = ichi_result[0]  # Main DataFrame
+# Columns: ISA_9 (SpanA), ISB_26 (SpanB), ITS_9 (Tenkan), IKS_26 (Kijun), ICS_26 (Chikou)
+```
+
+ACCOUNT CONFIG (align với Prop Firm):
+- cash = {ACCOUNT_BALANCE}          # $500 tài khoản
+- commission = 0.0002               # ~0.02% spread
+- margin = 1/{LEVERAGE}              # leverage {LEVERAGE}x
+- exclusive_orders = True           # Không hold nhiều lệnh cùng chiều
+
+BACKTEST EXECUTION ORDER bắt buộc:
+1. Load data (dùng pathlib, detect instrument từ strategy name)
+2. Implement Strategy class với self.I() wrapper
+3. Run initial backtest → print full stats
+4. Lưu chart: bt.plot(filename=str(CHARTS_DIR / f"{{strategy_name}}_initial.html"), open_browser=False)  
+5. Run optimization (optimize 3-5 params)
+6. Print optimized stats + chart
+
+SAU KHI CHẠY XONG — tính COMPOSITE SCORE:
+```python
+# Thêm vào cuối script
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from data.composite_scorer import composite_score, print_score_report
+
+stats_dict = dict(stats)
+score_result = composite_score(stats_dict)
+print_score_report(score_result, strategy_name)
+```
+
+WALK-FORWARD NOTE:
+- Optimize trên data: {OPTIMIZE_START} → {OPTIMIZE_END}
+- Validate trên data: {VALIDATE_START} → {VALIDATE_END}
+- Nếu có thể, slice df theo date range trước khi backtest
+
+Debug prints phải có emoji 🌙✨🚀 để dễ theo dõi.
+"""
+
+DEBUG_PROMPT = """
+Bạn là Debug AI — sửa lỗi kỹ thuật mà KHÔNG thay đổi logic chiến lược.
+
+Fix các lỗi:
+1. Syntax errors
+2. Import statements (đảm bảo pandas_ta thay TA-Lib)
+3. Path issues (Windows vs macOS)
+4. backtesting.lib.crossover → array indexing
+5. Variable scope, naming
+6. pandas-ta Ichimoku column names (ISA_9, ISB_26, ITS_9, IKS_26, ICS_26)
+7. self.I() wrapper cho tất cả indicators
+
+KHÔNG thay đổi:
+- Strategy logic
+- Entry/exit conditions  
+- Risk management rules
+- Parameter values
+
+Trả về complete fixed code.
+"""
+
+PACKAGE_PROMPT = """
+Bạn là Package AI — đảm bảo code KHÔNG dùng bất kỳ backtesting.lib nào.
+
+❌ CẤM TUYỆT ĐỐI:
+- from backtesting.lib import *
+- from backtesting.lib import crossover
+- backtesting.lib.crossover(a, b)
+
+✅ THAY THẾ BẮT BUỘC:
+- Crossover bullish: a[-2] < b[-2] and a[-1] > b[-1]
+- Crossover bearish: a[-2] > b[-2] and a[-1] < b[-1]
+- Indicators: dùng pandas_ta (không phải TA-Lib hay backtesting.lib)
+
+Scan toàn bộ code, fix hết, trả về complete code.
+"""
+
+EXPORT_MQL5_PROMPT = f"""
+Bạn là MQL5 Export AI — chuyển đổi chiến lược Python đã backtest thành MQL5 Expert Advisor skeleton.
+
+INPUT: Code Python backtesting đã được optimize + stats tốt nhất.
+
+OUTPUT: File MQL5 (.mq5) bao gồm:
+
+1. **Header & Properties**
+   - #property copyright, version, description
+   - #include <Trade/Trade.mqh>
+
+2. **Input Parameters** (align với params đã optimize):
+   - InpTenkan, InpKijun, InpSenkouB (Ichimoku)
+   - InpEMAFast, InpEMASlow
+   - InpRiskPct (% equity per trade)
+   - InpSLPipsMultiplier
+   - InpTPRR (Risk-Reward ratio)
+   - InpMaxDD_Pct = {MAX_DRAWDOWN_PCT} (hard stop prop firm)
+   - InpDailyLoss_Pct = {DAILY_LOSS_LIMIT_PCT}
+
+3. **Global Variables**
+   - CTrade trade object
+   - iCustom handles (KHÔNG compute Ichimoku tay, dùng iCustom hoặc iIchimoku built-in)
+
+4. **OnInit()**: Initialize indicator handles, validate params
+
+5. **OnTick()**:
+   - check_prop_firm_limits() → return nếu vi phạm DD
+   - get_indicators() → lấy giá trị mới nhất
+   - signal = get_signal() → BUY/SELL/NONE
+   - Nếu có signal và không có position: open_trade(signal)
+   - Trailing stop logic nếu có position
+
+6. **Signal functions**:
+   - is_above_cloud(), is_below_cloud()
+   - tenkan_kijun_cross_up(), tenkan_kijun_cross_down()
+   - ema_filter_bullish(), ema_filter_bearish()
+
+7. **Risk Management**:
+   - calculate_lot_size() theo % equity + SL distance
+   - check_daily_loss_limit()
+   - check_max_drawdown()
+
+8. **Comments** đầy đủ bằng tiếng Việt.
+
+QUAN TRỌNG:
+- Dùng iIchimoku() built-in của MT5 (không dùng iCustom indicator ngoài)
+- Tất cả magic numbers phải là named constants
+- Code phải compile được trong MetaEditor
+- Thêm comment: // Generated by MoonDev AI Agent — Comarai.com
+"""
+
+def get_model_id(model: str) -> str:
+    return "DR" if "reasoner" in model else "DC"
+
+
+# ═══════════════════════════════════════════════════════════════
+# AI CLIENT INITIALIZATION
+# ═══════════════════════════════════════════════════════════════
 
 def init_deepseek_client():
-    """Initialize DeepSeek client with proper error handling"""
+    key = os.getenv("DEEPSEEK_KEY")
+    if not key:
+        cprint("❌ DEEPSEEK_KEY không tìm thấy trong .env", "red")
+        return None
     try:
-        deepseek_key = os.getenv("DEEPSEEK_KEY")
-        if not deepseek_key:
-            raise ValueError("🚨 DEEPSEEK_KEY not found in environment variables!")
-            
-        print("🔑 Initializing DeepSeek client...")
-        print("🌟 Moon Dev's RBI Agent is connecting to DeepSeek...")
-        
-        client = openai.OpenAI(
-            api_key=deepseek_key,
-            base_url=DEEPSEEK_BASE_URL
-        )
-        
-        print("✅ DeepSeek client initialized successfully!")
-        print("🚀 Moon Dev's RBI Agent ready to roll!")
+        client = openai.OpenAI(api_key=key, base_url=DEEPSEEK_BASE_URL)
+        cprint("✅ DeepSeek client ready!", "green")
         return client
     except Exception as e:
-        print(f"❌ Error initializing DeepSeek client: {str(e)}")
-        print("💡 Check if your DEEPSEEK_KEY is valid and properly set")
+        cprint(f"❌ DeepSeek init error: {e}", "red")
         return None
 
-def chat_with_deepseek(system_prompt, user_content, model):
-    """Chat with DeepSeek API or fallback to default model based on setting"""
-    print(f"\n🤖 Starting chat with model: {model}...")
-    print("🌟 Moon Dev's RBI Agent is thinking...")
-    
+
+def init_gemini_client():
+    """Fallback: Google Gemini via openai-compatible endpoint."""
     try:
-        # Use DeepSeek if specified, otherwise use default model from config
-        if "deepseek" in model.lower():
-            client = init_deepseek_client()
-            if not client:
-                print("❌ Failed to initialize DeepSeek client")
-                return None
-                
-            print("📤 Sending request to DeepSeek API...")
-            print(f"🎯 Model: {model}")
-            print("🔄 Please wait while Moon Dev's RBI Agent processes your request...")
-            
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
-                ],
-                temperature=0.7
-            )
-            
-            if not response or not response.choices:
-                print("❌ Empty response from DeepSeek API")
-                return None
-                
-            print("📥 Received response from DeepSeek API!")
-            print(f"✨ Response length: {len(response.choices[0].message.content)} characters")
-            return response.choices[0].message.content.strip()
-            
-        else:
-            # Use existing model from config (preserve current functionality)
-            # This part should use your existing chat implementation
-            # We're just adding the DeepSeek option above
-            client = init_anthropic_client()  # Or whatever your current initialization is
-            if not client:
-                return None
-                
-            response = client.messages.create(
-                model=AI_MODEL,  # Use your config model
-                max_tokens=AI_MAX_TOKENS,
-                temperature=AI_TEMPERATURE,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_content}
-                ]
-            )
-            return response.content[0].text
-            
-    except Exception as e:
-        print(f"❌ Error in chat: {str(e)}")
-        print("💡 This could be due to API rate limits or invalid requests")
-        print(f"🔍 Error details: {str(e)}")
+        import google.generativeai as genai
+        key = os.getenv("GEMINI_KEY")
+        if not key:
+            cprint("⚠️ GEMINI_KEY không tìm thấy", "yellow")
+            return None
+        genai.configure(api_key=key)
+        cprint("✅ Gemini client ready (fallback)!", "cyan")
+        return genai
+    except ImportError:
+        cprint("⚠️ google-generativeai chưa cài: pip install google-generativeai", "yellow")
         return None
 
-def init_anthropic_client():
-    """Initialize Anthropic client for default model"""
-    try:
-        anthropic_key = os.getenv("ANTHROPIC_KEY")
-        if not anthropic_key:
-            raise ValueError("🚨 ANTHROPIC_KEY not found in environment variables!")
-            
-        return Anthropic(api_key=anthropic_key)
-    except Exception as e:
-        print(f"❌ Error initializing Anthropic client: {str(e)}")
-        return None
 
-def get_youtube_transcript(video_id):
-    """Get transcript from YouTube video"""
-    try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        transcript = transcript_list.find_generated_transcript(['en'])
-        cprint("📺 Successfully fetched YouTube transcript!", "green")
-        return ' '.join([t['text'] for t in transcript.fetch()])
-    except Exception as e:
-        cprint(f"❌ Error fetching transcript: {e}", "red")
-        return None
+def chat_with_ai(system_prompt: str, user_content: str, model: str) -> str | None:
+    """Chat với AI — DeepSeek primary, Gemini fallback."""
+    cprint(f"\n🤖 Sending to {model}...", "yellow")
 
-def get_pdf_text(url):
-    """Extract text from PDF URL"""
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        reader = PyPDF2.PdfReader(BytesIO(response.content))
-        text = ''
-        for page in reader.pages:
-            text += page.extract_text() + '\n'
-        cprint("📚 Successfully extracted PDF text!", "green")
-        return text
-    except Exception as e:
-        cprint(f"❌ Error reading PDF: {e}", "red")
-        return None
+    # ── DeepSeek ────────────────────────────────────────────
+    if "deepseek" in model.lower():
+        client = init_deepseek_client()
+        if client:
+            try:
+                resp = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content},
+                    ],
+                    temperature=AI_TEMPERATURE,
+                    max_tokens=AI_MAX_TOKENS,
+                )
+                result = resp.choices[0].message.content.strip()
+                cprint(f"✅ DeepSeek response: {len(result)} chars", "green")
+                return result
+            except Exception as e:
+                cprint(f"❌ DeepSeek error: {e}", "red")
+                if not USE_GEMINI_FALLBACK:
+                    return None
+                cprint("🔄 Switching to Gemini fallback...", "yellow")
 
-def animate_progress(agent_name, stop_event):
-    """Fun animation while agent is thinking"""
-    spinners = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘']
-    messages = [
-        "brewing coffee ☕️",
-        "studying charts 📊",
-        "checking signals 📡",
-        "doing math 🔢",
-        "reading docs 📚",
-        "analyzing data 🔍",
-        "making magic ✨",
-        "trading secrets 🤫",
-        "Moon Dev approved 🌙",
-        "to the moon! 🚀"
-    ]
-    
-    spinner = itertools.cycle(spinners)
-    message = itertools.cycle(messages)
-    
-    while not stop_event.is_set():
-        sys.stdout.write(f'\r{next(spinner)} {agent_name} is {next(message)}...')
-        sys.stdout.flush()
-        time.sleep(0.5)
-    sys.stdout.write('\r' + ' ' * 50 + '\r')
-    sys.stdout.flush()
+    # ── Gemini Fallback ─────────────────────────────────────
+    if USE_GEMINI_FALLBACK:
+        genai = init_gemini_client()
+        if genai:
+            try:
+                gmodel = genai.GenerativeModel(
+                    model_name=GEMINI_FALLBACK_MODEL,
+                    system_instruction=system_prompt,
+                )
+                resp = gmodel.generate_content(user_content)
+                result = resp.text.strip()
+                cprint(f"✅ Gemini fallback response: {len(result)} chars", "cyan")
+                return result
+            except Exception as e:
+                cprint(f"❌ Gemini error: {e}", "red")
 
-def run_with_animation(func, agent_name, *args, **kwargs):
-    """Run a function with a fun loading animation"""
-    stop_animation = threading.Event()
-    animation_thread = threading.Thread(target=animate_progress, args=(agent_name, stop_animation))
-    
-    try:
-        animation_thread.start()
-        result = func(*args, **kwargs)
-        return result
-    finally:
-        stop_animation.set()
-        animation_thread.join()
-
-def research_strategy(content):
-    """Research Agent: Analyzes and creates trading strategy"""
-    cprint("\n🔍 Starting Research Agent...", "cyan")
-    cprint("🤖 Time to discover some alpha!", "yellow")
-    
-    output = run_with_animation(
-        chat_with_deepseek,
-        "Research Agent",
-        RESEARCH_PROMPT, 
-        content, 
-        RESEARCH_MODEL
-    )
-    
-    if output:
-        # Extract strategy name from output
-        strategy_name = "UnknownStrategy"  # Default name
-        if "STRATEGY_NAME:" in output:
-            strategy_name = output.split("STRATEGY_NAME:")[1].split("\n")[0].strip()
-            # Clean up strategy name to be file-system friendly
-            strategy_name = re.sub(r'[^\w\s-]', '', strategy_name)
-            strategy_name = re.sub(r'[\s]+', '', strategy_name)
-        
-        # Save research output
-        filepath = RESEARCH_DIR / f"{strategy_name}_strategy.txt"
-        with open(filepath, 'w') as f:
-            f.write(output)
-        cprint(f"📝 Research Agent found something spicy! Saved to {filepath} 🌶️", "green")
-        cprint(f"🏷️ Generated strategy name: {strategy_name}", "yellow")
-        return output, strategy_name
-    return None, None
-
-def create_backtest(strategy, strategy_name="UnknownStrategy"):
-    """Backtest Agent: Creates backtest implementation"""
-    cprint("\n📊 Starting Backtest Agent...", "cyan")
-    cprint("💰 Let's turn that strategy into profits!", "yellow")
-    
-    output = run_with_animation(
-        chat_with_deepseek,
-        "Backtest Agent",
-        BACKTEST_PROMPT,
-        f"Create a backtest for this strategy:\n\n{strategy}",
-        BACKTEST_MODEL
-    )
-    
-    if output:
-        filepath = BACKTEST_DIR / f"{strategy_name}_BT.py"
-        with open(filepath, 'w') as f:
-            f.write(output)
-        cprint(f"🔥 Backtest Agent cooked up some heat! Saved to {filepath} 🚀", "green")
-        return output
+    cprint("❌ Tất cả AI models đều fail. Kiểm tra API keys trong .env", "red")
     return None
 
-def debug_backtest(backtest_code, strategy=None, strategy_name="UnknownStrategy"):
-    """Debug Agent: Fixes technical issues in backtest code"""
-    cprint("\n🔧 Starting Debug Agent...", "cyan")
-    cprint("🔍 Time to squash some bugs!", "yellow")
-    
-    context = f"Here's the backtest code to debug:\n\n{backtest_code}"
-    if strategy:
-        context += f"\n\nOriginal strategy for reference:\n{strategy}"
-    
-    output = run_with_animation(
-        chat_with_deepseek,
-        "Debug Agent",
-        DEBUG_PROMPT,
-        context,
-        DEBUG_MODEL
-    )
-    
-    if output:
-        code_match = re.search(r'```python\n(.*?)\n```', output, re.DOTALL)
-        if code_match:
-            output = code_match.group(1)
-            
-        # Save to final directory with strategy name
-        filepath = FINAL_BACKTEST_DIR / f"{strategy_name}_BTFinal.py"
-        with open(filepath, 'w') as f:
-            f.write(output)
-        cprint(f"🔧 Debug Agent fixed the code! Saved to {filepath} ✨", "green")
-        return output
-    return None
 
-def package_check(backtest_code, strategy_name="UnknownStrategy"):
-    """Package Agent: Ensures correct indicator packages are used"""
-    cprint("\n📦 Starting Package Agent...", "cyan")
-    cprint("🔍 Checking for proper indicator imports!", "yellow")
-    
-    output = run_with_animation(
-        chat_with_deepseek,
-        "Package Agent",
-        PACKAGE_PROMPT,
-        f"Check and fix indicator packages in this code:\n\n{backtest_code}",
-        DEBUG_MODEL
-    )
-    
-    if output:
-        code_match = re.search(r'```python\n(.*?)\n```', output, re.DOTALL)
-        if code_match:
-            output = code_match.group(1)
-            
-        # Save to package directory
-        filepath = PACKAGE_DIR / f"{strategy_name}_PKG.py"
-        with open(filepath, 'w') as f:
-            f.write(output)
-        cprint(f"📦 Package Agent optimized the imports! Saved to {filepath} ✨", "green")
-        return output
-    return None
+# ═══════════════════════════════════════════════════════════════
+# PIPELINE FUNCTIONS
+# ═══════════════════════════════════════════════════════════════
 
-def get_idea_content(idea_url: str) -> str:
-    """Extract content from a trading idea URL or text"""
-    print("\n📥 Extracting content from idea...")
-    
-    try:
-        if "youtube.com" in idea_url or "youtu.be" in idea_url:
-            # Extract video ID from URL
-            if "v=" in idea_url:
-                video_id = idea_url.split("v=")[1].split("&")[0]
-            else:
-                video_id = idea_url.split("/")[-1].split("?")[0]
-            
-            print("🎥 Detected YouTube video, fetching transcript...")
-            transcript = get_youtube_transcript(video_id)
-            if transcript:
-                print("✅ Successfully extracted YouTube transcript!")
-                return f"YouTube Strategy Content:\n\n{transcript}"
-            else:
-                raise ValueError("Failed to extract YouTube transcript")
-                
-        elif idea_url.endswith(".pdf"):
-            print("📚 Detected PDF file, extracting text...")
-            pdf_text = get_pdf_text(idea_url)
-            if pdf_text:
-                print("✅ Successfully extracted PDF content!")
-                return f"PDF Strategy Content:\n\n{pdf_text}"
-            else:
-                raise ValueError("Failed to extract PDF text")
-                
-        else:
-            print("📝 Using raw text input...")
-            return f"Text Strategy Content:\n\n{idea_url}"
-            
-    except Exception as e:
-        print(f"❌ Error extracting content: {str(e)}")
-        raise
+def extract_code(text: str) -> str:
+    """Extract Python code từ markdown code blocks."""
+    code_match = re.search(r"```python\n(.*?)```", text, re.DOTALL)
+    if code_match:
+        return code_match.group(1).strip()
+    # Fallback: nếu không có markdown, coi toàn bộ là code
+    if "import " in text or "class " in text or "def " in text:
+        return text.strip()
+    return text.strip()
 
-def process_trading_idea(idea: str) -> None:
-    """Process a single trading idea completely independently"""
-    print("\n🚀 Moon Dev's RBI Agent Processing New Idea!")
-    print("🌟 Let's find some alpha in the chaos!")
-    print(f"📝 Processing idea: {idea[:100]}...")
-    
-    try:
-        # Step 1: Extract content from the idea
-        idea_content = get_idea_content(idea)
-        if not idea_content:
-            print("❌ Failed to extract content from idea!")
-            return
-            
-        print(f"📄 Extracted content length: {len(idea_content)} characters")
-        
-        # Phase 1: Research with isolated content
-        print("\n🧪 Phase 1: Research")
-        strategy, strategy_name = research_strategy(idea_content)
-        
-        if not strategy:
-            print("❌ Research phase failed!")
-            return
-            
-        print(f"🏷️ Strategy Name: {strategy_name}")
-        
-        # Save research output
-        research_file = RESEARCH_DIR / f"{strategy_name}_strategy.txt"
-        with open(research_file, 'w') as f:
-            f.write(strategy)
-            
-        # Phase 2: Backtest using only the research output
-        print("\n📈 Phase 2: Backtest")
-        backtest = create_backtest(strategy, strategy_name)
-        
-        if not backtest:
-            print("❌ Backtest phase failed!")
-            return
-            
-        # Save backtest output
-        backtest_file = BACKTEST_DIR / f"{strategy_name}_BT.py"
-        with open(backtest_file, 'w') as f:
-            f.write(backtest)
-            
-        # Phase 3: Package Check using only the backtest code
-        print("\n📦 Phase 3: Package Check")
-        package_checked = package_check(backtest, strategy_name)
-        
-        if not package_checked:
-            print("❌ Package check failed!")
-            return
-            
-        # Save package check output
-        package_file = PACKAGE_DIR / f"{strategy_name}_PKG.py"
-        with open(package_file, 'w') as f:
-            f.write(package_checked)
-            
-        # Phase 4: Debug using only the package-checked code
-        print("\n🔧 Phase 4: Debug")
-        final_backtest = debug_backtest(package_checked, strategy, strategy_name)
-        
-        if not final_backtest:
-            print("❌ Debug phase failed!")
-            return
-            
-        # Save final backtest
-        final_file = FINAL_BACKTEST_DIR / f"{strategy_name}_BTFinal.py"
-        with open(final_file, 'w') as f:
-            f.write(final_backtest)
-            
-        print("\n🎉 Mission Accomplished!")
-        print(f"🚀 Strategy '{strategy_name}' is ready to make it rain! 💸")
-        print(f"✨ Final backtest saved at: {final_file}")
-        
-    except Exception as e:
-        print(f"\n❌ Error processing idea: {str(e)}")
-        raise
 
-def main():
-    """Main function to process ideas from file"""
-    ideas_file = DATA_DIR / "ideas.txt"
-    
-    if not ideas_file.exists():
-        cprint("❌ ideas.txt not found! Creating template...", "red")
-        ideas_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(ideas_file, 'w') as f:
-            f.write("# Add your trading ideas here (one per line)\n")
-            f.write("# Can be YouTube URLs, PDF links, or text descriptions\n")
-        return
-        
-    with open(ideas_file, 'r') as f:
-        ideas = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-        
-    total_ideas = len(ideas)
-    cprint(f"\n🎯 Found {total_ideas} trading ideas to process", "cyan")
-    
-    for i, idea in enumerate(ideas, 1):
-        cprint(f"\n{'='*50}", "yellow")
-        cprint(f"🌙 Processing idea {i}/{total_ideas}", "cyan")
-        cprint(f"📝 Idea content: {idea[:100]}{'...' if len(idea) > 100 else ''}", "yellow")
-        cprint(f"{'='*50}\n", "yellow")
-        
+def extract_strategy_name(research_output: str) -> str:
+    """Extract strategy name từ output của Research AI."""
+    match = re.search(r"STRATEGY_NAME:\s*([A-Za-z0-9_]+)", research_output)
+    if match:
+        return match.group(1).strip()
+    ts = datetime.now().strftime("%Y%m%d_%H%M")
+    return f"Strategy_{ts}"
+
+
+def get_input_content(user_input: str) -> str:
+    """Xử lý input: text, YouTube URL, PDF URL hoặc file path."""
+    # YouTube
+    yt_match = re.search(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})", user_input)
+    if yt_match:
+        vid_id = yt_match.group(1)
+        cprint(f"📺 Downloading YouTube transcript: {vid_id}", "yellow")
         try:
-            # Process each idea in complete isolation
-            process_trading_idea(idea)
-            
-            # Clear separator between ideas
-            cprint(f"\n{'='*50}", "green")
-            cprint(f"✅ Completed idea {i}/{total_ideas}", "green")
-            cprint(f"{'='*50}\n", "green")
-            
-            # Break between ideas
-            if i < total_ideas:
-                cprint("😴 Taking a break before next idea...", "yellow")
-                time.sleep(5)
-                
+            transcript_list = YouTubeTranscriptApi.list_transcripts(vid_id)
+            try:
+                t = transcript_list.find_generated_transcript(["en"])
+            except Exception:
+                t = list(transcript_list)[0]
+            segments = t.fetch()
+            text = " ".join(s["text"] for s in segments)
+            cprint(f"✅ Transcript: {len(text)} chars", "green")
+            return text
         except Exception as e:
-            cprint(f"\n❌ Error processing idea {i}: {str(e)}", "red")
-            cprint("🔄 Continuing with next idea...\n", "yellow")
-            continue
+            cprint(f"❌ YouTube error: {e}", "red")
+            return user_input
+
+    # URL PDF
+    if user_input.startswith("http") and ".pdf" in user_input:
+        cprint("📄 Downloading PDF...", "yellow")
+        try:
+            r = requests.get(user_input, timeout=15)
+            reader = PyPDF2.PdfReader(BytesIO(r.content))
+            text = " ".join(page.extract_text() or "" for page in reader.pages)
+            cprint(f"✅ PDF: {len(text)} chars", "green")
+            return text
+        except Exception as e:
+            cprint(f"❌ PDF error: {e}", "red")
+            return user_input
+
+    # Local PDF file
+    if user_input.endswith(".pdf") and Path(user_input).exists():
+        cprint(f"📄 Reading local PDF: {user_input}", "yellow")
+        try:
+            with open(user_input, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
+                text = " ".join(page.extract_text() or "" for page in reader.pages)
+            return text
+        except Exception as e:
+            cprint(f"❌ Local PDF error: {e}", "red")
+            return user_input
+
+    # Plain text
+    return user_input
+
+
+def save_file(content: str, directory: Path, name: str, ext: str = "py") -> Path:
+    """Lưu file và trả về path."""
+    ts = datetime.now().strftime("%m%d_%H%M")
+    filename = f"{name}_{ts}.{ext}"
+    filepath = directory / filename
+    filepath.write_text(content, encoding="utf-8")
+    cprint(f"💾 Saved: {filepath}", "cyan")
+    return filepath
+
+
+def spinner(stop_event: threading.Event, label: str = "Thinking"):
+    """Hiển thị spinner trong khi chờ AI."""
+    chars = itertools.cycle(["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"])
+    while not stop_event.is_set():
+        print(f"\r🌙 {label} {next(chars)}", end="", flush=True)
+        time.sleep(0.1)
+    print("\r" + " " * 40 + "\r", end="")
+
+
+# ═══════════════════════════════════════════════════════════════
+# MAIN PIPELINE
+# ═══════════════════════════════════════════════════════════════
+
+def run_rbi_pipeline(user_input: str):
+    """
+    Full 5-agent pipeline:
+    Input → Research → Backtest → Debug → Package → MQL5 Export
+    """
+    cprint("\n" + "═"*60, "magenta")
+    cprint("  🌙 MoonDev RBI Agent — Ichimoku + MQL5 Edition", "magenta", attrs=["bold"])
+    cprint("═"*60 + "\n", "magenta")
+
+    # ── Chuẩn bị input ──────────────────────────────────────
+    content = get_input_content(user_input)
+    if not content:
+        cprint("❌ Không đọc được input content", "red")
+        return
+
+    # ── [1] Research AI ─────────────────────────────────────
+    cprint("🔬 [1/5] Research AI đang phân tích strategy...", "cyan")
+    stop_event = threading.Event()
+    t = threading.Thread(target=spinner, args=(stop_event, "Research AI"), daemon=True)
+    t.start()
+    research_output = chat_with_ai(RESEARCH_PROMPT, content, RESEARCH_MODEL)
+    stop_event.set()
+    t.join()
+
+    if not research_output:
+        cprint("❌ Research AI failed", "red")
+        return
+
+    strategy_name = extract_strategy_name(research_output)
+    cprint(f"✅ Strategy: {strategy_name}", "green")
+    save_file(research_output, RESEARCH_DIR, strategy_name, ext="txt")
+
+    # ── [2] Backtest AI ─────────────────────────────────────
+    cprint(f"\n💻 [2/5] Backtest AI đang code {strategy_name}...", "cyan")
+    data_path = DEFAULT_DATA_PATH
+    xau_path = DATA_DIR / "XAUUSD-1H.csv"
+    if xau_path.exists():
+        data_path = xau_path
+
+    backtest_input = f"""
+Strategy Analysis:
+{research_output}
+
+Data path to use: {data_path}
+Charts dir: {CHARTS_DIR}
+Strategy name: {strategy_name}
+"""
+    stop_event = threading.Event()
+    t = threading.Thread(target=spinner, args=(stop_event, "Backtest AI"), daemon=True)
+    t.start()
+    backtest_output = chat_with_ai(BACKTEST_PROMPT, backtest_input, BACKTEST_MODEL)
+    stop_event.set()
+    t.join()
+
+    if not backtest_output:
+        cprint("❌ Backtest AI failed", "red")
+        return
+
+    backtest_code = extract_code(backtest_output)
+    backtest_file = save_file(backtest_code, BACKTEST_DIR, f"{strategy_name}_BT")
+
+    # ── [3] Debug AI ─────────────────────────────────────────
+    cprint(f"\n🐛 [3/5] Debug AI đang kiểm tra lỗi...", "cyan")
+    stop_event = threading.Event()
+    t = threading.Thread(target=spinner, args=(stop_event, "Debug AI"), daemon=True)
+    t.start()
+    debug_output = chat_with_ai(DEBUG_PROMPT, backtest_code, DEBUG_MODEL)
+    stop_event.set()
+    t.join()
+
+    if debug_output:
+        backtest_code = extract_code(debug_output)
+
+    # ── [4] Package AI ───────────────────────────────────────
+    cprint(f"\n📦 [4/5] Package AI đang clean backtesting.lib...", "cyan")
+    stop_event = threading.Event()
+    t = threading.Thread(target=spinner, args=(stop_event, "Package AI"), daemon=True)
+    t.start()
+    package_output = chat_with_ai(PACKAGE_PROMPT, backtest_code, BACKTEST_MODEL)
+    stop_event.set()
+    t.join()
+
+    if package_output:
+        backtest_code = extract_code(package_output)
+        save_file(backtest_code, PACKAGE_DIR, f"{strategy_name}_PKG")
+
+    # Final backtest file (ready to run)
+    final_file = save_file(backtest_code, FINAL_DIR, f"{strategy_name}_BTFinal")
+
+    # ── [5] MQL5 Export AI ──────────────────────────────────
+    cprint(f"\n⚙️ [5/5] MQL5 Export AI đang generate .mq5...", "cyan")
+    mql5_input = f"""
+Strategy Name: {strategy_name}
+Python Backtest Code:
+{backtest_code}
+
+Research Notes:
+{research_output[:2000]}
+"""
+    stop_event = threading.Event()
+    t = threading.Thread(target=spinner, args=(stop_event, "MQL5 Export AI"), daemon=True)
+    t.start()
+    mql5_output = chat_with_ai(EXPORT_MQL5_PROMPT, mql5_input, EXPORT_MQL5_MODEL)
+    stop_event.set()
+    t.join()
+
+    if mql5_output:
+        # Extract MQL5 code block
+        mql5_code = re.search(r"```(?:mq5|cpp|c\+\+)?\n(.*?)```", mql5_output, re.DOTALL)
+        mql5_str = mql5_code.group(1).strip() if mql5_code else mql5_output
+        mql5_file = save_file(mql5_str, MQL5_DIR, f"{strategy_name}_EA", ext="mq5")
+        cprint(f"✅ MQL5 EA saved: {mql5_file}", "green")
+    else:
+        cprint("⚠️ MQL5 Export skipped (AI failed)", "yellow")
+
+    # ── Summary ─────────────────────────────────────────────
+    cprint("\n" + "═"*60, "green")
+    cprint(f"  ✅ Pipeline hoàn tất: {strategy_name}", "green", attrs=["bold"])
+    cprint(f"  📁 Research:  {RESEARCH_DIR}", "white")
+    cprint(f"  📁 Backtest:  {BACKTEST_DIR}", "white")
+    cprint(f"  📁 Final:     {FINAL_DIR}", "white")
+    cprint(f"  📁 MQL5 EA:  {MQL5_DIR}", "white")
+    cprint(f"  📁 Charts:    {CHARTS_DIR}", "white")
+    cprint("═"*60, "green")
+    cprint("\n💡 Tiếp theo: chạy file BTFinal để xem composite score!", "yellow")
+
+
+# ═══════════════════════════════════════════════════════════════
+# ENTRY POINT
+# ═══════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    try:
-        # Show which models are being used
-        cprint(f"\n🌟 Moon Dev's RBI Agent Starting Up!", "green")
-        cprint(f"🧪 Research Model: {RESEARCH_MODEL if 'deepseek' in RESEARCH_MODEL.lower() else AI_MODEL}", "cyan")
-        cprint(f"📊 Backtest Model: {BACKTEST_MODEL if 'deepseek' in BACKTEST_MODEL.lower() else AI_MODEL}", "cyan")
-        cprint(f"🔧 Debug Model: {DEBUG_MODEL if 'deepseek' in DEBUG_MODEL.lower() else AI_MODEL}", "cyan")
-        main()
-    except KeyboardInterrupt:
-        cprint("\n👋 Moon Dev's RBI Agent shutting down gracefully...", "yellow")
-    except Exception as e:
-        cprint(f"\n❌ Fatal error: {str(e)}", "red")
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    cprint("🌙 MoonDev RBI Agent v2 — Ichimoku + MQL5 Export", "magenta", attrs=["bold"])
+    cprint("=" * 60, "magenta")
+    cprint("Input có thể là:", "cyan")
+    cprint("  1. Text mô tả strategy (paste trực tiếp)", "white")
+    cprint("  2. YouTube URL (transcript tự động)", "white")
+    cprint("  3. PDF URL hoặc path file .pdf", "white")
+    cprint("=" * 60, "magenta")
+
+    user_input = input("\n🎯 Nhập strategy / URL: ").strip()
+    if user_input:
+        run_rbi_pipeline(user_input)
+    else:
+        cprint("❌ Input rỗng, thoát.", "red")

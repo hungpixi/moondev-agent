@@ -1,0 +1,41 @@
+# Environment & Secrets (KHÔNG BAO GIỜ PUSH)
+.env
+context.md
+*.key
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+venv/
+.venv/
+env/
+
+# Data (OHLCV files lớn, không cần push)
+src/data/rbi/*.csv
+src/data/rbi/backtests/*.html
+src/data/rbi/backtests_final/*.html
+src/data/rbi/backtests_package/*.html
+src/data/rbi/charts/
+src/data/tweets/
+src/data/*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
